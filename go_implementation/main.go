@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-const ArrayLength = 5_000_000
-const ThreadCount = 8
+const ArrayLength = 50_000_000
+const ThreadCount = 17
 
 type Array [ArrayLength]int
 
