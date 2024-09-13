@@ -7,14 +7,10 @@ import (
 	"time"
 )
 
-const ArrayLength = 50_000_000
-const ThreadCount = 7
+const ArrayLength = 5_000_000
+const ThreadCount = 8
 
 type Array [ArrayLength]int
-type ChunkResult struct {
-	result       int
-	workerNumber int
-}
 
 func fillArray() Array {
 	var a Array
@@ -32,7 +28,7 @@ func sumArray(a []int) int {
 	return sum
 }
 
-func worker(a []int, workerNumber int, ch chan<- ChunkResult, wg *sync.WaitGroup) {
+func worker(a []int, workerNumber int, ch chan<- int, wg *sync.WaitGroup) {
 	defer func() {
 		fmt.Printf("потік № %d завершив роботу\n", workerNumber)
 		wg.Done()
@@ -44,13 +40,10 @@ func worker(a []int, workerNumber int, ch chan<- ChunkResult, wg *sync.WaitGroup
 		*/
 		time.Sleep(time.Second)
 	}
-	ch <- ChunkResult{
-		result:       sumArray(a),
-		workerNumber: workerNumber,
-	}
+	ch <- sumArray(a)
 }
 
-func waitWorkers(ch chan ChunkResult, wg *sync.WaitGroup) {
+func waitWorkers(ch chan int, wg *sync.WaitGroup) {
 	/*
 		чекаємо, поки завершаться всі потоки, щоб коректно закрити канал
 	*/
@@ -63,7 +56,7 @@ func main() {
 	fmt.Printf("довжина масиву: %d\nк-ть потоків: %d\n", ArrayLength, ThreadCount)
 
 	a := fillArray()
-	syncCalculatedSum := sumArray(a[:])
+	syncCalculatedSum := sumArray(a[:]) // синхронно рахуємо суму масиву, щоб звірити
 	parallelCalculatedSum := 0
 
 	chunkSize := int(math.Ceil(float64(ArrayLength) / float64(ThreadCount)))
@@ -73,7 +66,7 @@ func main() {
 		створюємо буферизований канал, щоб вичитувати проміжні результати,
 		та не блокувати потоки на запис
 	*/
-	ch := make(chan ChunkResult, ThreadCount)
+	ch := make(chan int, ThreadCount)
 	/*
 		створюємо WaitGroup, щоб дочекатись, поки всі потоки відпрацюють,
 		щоб коректно закрити канал
@@ -99,7 +92,7 @@ func main() {
 			fmt.Printf("канал закрито\n")
 			break
 		}
-		parallelCalculatedSum += res.result
+		parallelCalculatedSum += res
 	}
 
 	fmt.Printf("паралельно порахована сума масиву: %d\n", parallelCalculatedSum)
